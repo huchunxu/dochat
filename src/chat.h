@@ -51,6 +51,7 @@ typedef enum{
 
 typedef enum{
     CMD_LOGIN,
+    CMD_REGISTER,
     CMD_WHOISON,
     CMD_LOGOUT,
     CMD_LAST,
@@ -89,10 +90,12 @@ struct _ChatList{
 //客户端信息结构体
 typedef struct{
     char *name;
+    char *password;
     int status;
     int events;
     int sktfd;
     int epfd;
+    int login_stat;
     ChatPacket *pktsnd;
     ChatPacket *pktget;
     PktStatus pktstat;
@@ -111,7 +114,7 @@ typedef struct{
     pthread_mutex_t lock;
 }ChatServer;
 
-//函数生命
+//函数声明
 int chat_add_events(ChatClient *cli, int events);
 int fd_add_events(int epfd, int fd, int events);
 int client_login(ChatClient *cli);
@@ -133,5 +136,6 @@ int send_to_client(ChatClient *cli, const char *msg);
 int fd_remove_events(int epfd, int fd);
 int packet_add_msg(ChatPacket *pkt, const char *msg);
 int client_parse_input(ChatClient *cli, char *input);
+int client_register(ChatClient *cli);
 
 #endif

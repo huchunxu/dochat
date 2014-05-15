@@ -2,6 +2,7 @@
 
 static const char *g_cmd[CMD_LAST] = {
     [CMD_LOGIN] = "LOGIN",
+    [CMD_REGISTER] = "REGISTER",
     [CMD_WHOISON] = "WHOISON",
     [CMD_LOGOUT] = "LOGOUT",
 };
@@ -48,11 +49,40 @@ int fd_add_events(int epfd, int fd, int events)
     return 0;
 }
 
+/**
+ * @brief 用户登陆
+ *
+ * @param cli  客户端数据结构
+ * @param pwd  密码
+ *
+ * @return 
+ */
 int client_login(ChatClient *cli)
 {
     ChatPacket *pkt = packet_new(cli->name, SERV_NAME);
-    pkt->nmsg = 1;
+    pkt->nmsg = 2;
     pkt->msg[0] = strdup(g_cmd[CMD_LOGIN]);
+    pkt->msg[1] = strdup(cli->password);
+    pkt->time = gettime();
+    cli->pktsnd = pkt;
+    return client_flush(cli);
+}
+
+/**
+ * @brief 客户端注册账号
+ *
+ * @param cli    客户端
+ * @param user_name 用户名
+ * @param pwd 密码
+ *
+ * @return 
+ */
+int client_register(ChatClient *cli)
+{
+    ChatPacket *pkt = packet_new(cli->name, SERV_NAME);
+    pkt->nmsg = 2;
+    pkt->msg[0] = strdup(g_cmd[CMD_REGISTER]);
+    pkt->msg[1] = strdup(cli->password);
     pkt->time = gettime();
     cli->pktsnd = pkt;
     return client_flush(cli);

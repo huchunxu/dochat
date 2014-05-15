@@ -9,91 +9,83 @@
  *=============================================================*/
 #include "chat.h"
 
-static char *serverip = NULL;
-static int serverport = 0;
-static char inputbuf[MAXLEN] = {0};  //stdin输入缓存
-static int inputs=0;
+static char *serverip = "127.0.0.1";
+static int serverport = 8000;
+static char inputbuf[MAXLEN] ={ 0 };  //stdin输入缓存
+static int inputs = 0;
 static int input_handler(ChatClient *cli);
 static int input_parse(ChatClient *cli);
 static int socket_handler(ChatClient *cli);
 
-void help(char *name)
+/**
+ * @brief 帮助信息
+ */
+void help()
 {
-    if (name==NULL){
-        return ;
-    }
     printf("Usage:\n");
-    printf("  %s [config]\n", name);
-    printf("Example: %s yichat.conf\n",name);
+    printf("Example: Login: ./chatclient -u hcx -p 123456\n");
+    printf("Example: Register: ./chatclient -r -u hcx -p 123456\n");
 }
 
-void config_example(void)
+/**
+ * @brief 参数分析
+ *
+ * @param cli    客户端数据结构
+ * @param argc   参数数量
+ * @param argv[] 参数值
+ *
+ * @return 
+ */
+int para_analyze(ChatClient *cli, int argc, char *argv[])
 {
-    printf("please set config file as this!\n");
-    printf("name=yiletian\n");
-    printf("serverip=192.168.1.45\n");
-    printf("serverport=8000\n");
-}
-
-int client_config(ChatClient *cli, const char *config)
-{
-    if (cli==NULL || config==NULL)
+    int rflag = 0;
+    int uflag = 0;
+    int pflag = 0;
+    int hflag = 0;
+    int ch;
+    while ((ch = getopt(argc, argv, "ru:p:")) != -1)
     {
-        goto FAILED;
-    }
-    FILE *fp = fopen(config, "r");
-    if (fp==NULL)
-    {
-        printf("[ChatClient]: can't open config file for read\n");
-        goto FAILED;
+        switch (ch) {
+        case 'r':
+            rflag = 1;
+            printf("Trying to apply for registration...\n");
+            break;
+        case 'u':
+            uflag = 1;
+            cli->name = strdup(optarg);
+            printf("The user name %s\n", cli->name);
+            break;
+        case 'p':
+            pflag = 1;
+            cli->password = strdup(optarg);
+            printf("The password is %s\n", cli->password);
+            break;
+        case '?':
+            hflag = 1;
+            printf("Unknown option: %c\n",(char)optopt);
+            break;
+        }
     }
 
-    char buf[MAXLEN] = {0};
-    char *key = NULL;
-    char *val = NULL;
-    char *line = NULL;
-    while(fgets(buf, MAXLEN-1, fp))
+    if(rflag && uflag && pflag)    //注册用户
     {
-        line = str_strip(buf);
-        if (*line && *line!='#')
-        {
-            line_parse(line, '=', &key, &val);
-            key = str_strip(key);
-            val = str_strip(val);
-        }else{
-            bzero(buf, MAXLEN);
-            continue;
-        }
-        if (key==NULL || val==NULL){
-            bzero(buf, MAXLEN);
-            continue;
-        }
-
-        if (strcmp(key, "name")==0){
-            cli->name = strdup(val);
-        }else if(strcmp(key, "serverip")==0){
-            serverip = strdup(val);
-        }else if(strcmp(key, "serverport")==0){
-            serverport = atoi(val);
-        }
-        bzero(buf, MAXLEN);
+        return  CMD_REGISTER;
     }
-    if (cli->name==NULL){
-        printf("please set \"name\" in client config file\n");
-        goto FAILED;
+    else if(uflag && pflag)       //登陆
+    {
+        return CMD_LOGIN;
     }
-    if (serverip==NULL){
-        printf("please set \"serverip\" in client config file\n");
-        goto FAILED;
+    else if(hflag)
+    {
+        help();
+        return -1; 
     }
-    if(serverport<=0){
-        printf("please set \"serverport\" in client config file\n");
-        goto FAILED;
+    else
+    {
+        printf("The user or the password is not input!\n");
+        help();
+        return -1; 
     }
-    return 0;
-FAILED:
-    config_example();
-    return -1;
 }
 
 /**
@@ -106,25 +98,23 @@ FAILED:
  */
 int main(int argc, char *argv[])
 {
-    if (argc<2){
-        printf("[%s]: please set a config file\n",argv[0]);
-        help(argv[0]);
-        return -1;
-    }
+    int para_mode = 0;
 
-    ChatClient *cli = (ChatClient *)malloc(sizeof(ChatClient));   //客户端分配资源
-    if (cli==NULL)
+    ChatClient *cli = (ChatClient *) malloc(sizeof(ChatClient));   //客户端分配资源
+    if (cli == NULL)
     {
         printf("[%s]: failed to malloc\n", argv[0]);
         return -1;
     }
     bzero(cli, sizeof(ChatClient));
-    if(client_config(cli, argv[1])<0){
+
+    if ((para_mode = para_analyze(cli, argc, argv)) < 0)
+    {
         return -1;
     }
 
     cli->sktfd = socket(AF_INET, SOCK_STREAM, 0);             //建立socket
-    if(cli->sktfd < 0)
+    if (cli->sktfd < 0)
     {
         printf("Client socket error\n");
         return -1;
@@ -132,32 +122,43 @@ int main(int argc, char *argv[])
     cli->sktaddr.sin_family = AF_INET;
     cli->sktaddr.sin_port = htons(serverport);
     inet_pton(AF_INET, serverip, &(cli->sktaddr.sin_addr));   //点分十进制转换成整数
-    connect(cli->sktfd, (struct sockaddr *)&(cli->sktaddr), sizeof(cli->sktaddr));
+    connect(cli->sktfd, (struct sockaddr *) &(cli->sktaddr), sizeof(cli->sktaddr));
 
-    if(client_login(cli) < 0)
+    if(para_mode == CMD_REGISTER)
     {
-        printf("failed to login\n");
-        return -1;
+         if(client_register(cli) < 0)
+         {
+             printf("failed to register\n");
+             return -1;
+         }
+    }
+    else
+    {
+        if (client_login(cli) < 0)
+        {
+            printf("failed to login\n");
+            return -1;
+        }
     }
     printf("> ");
-    fflush(stdout); 
+    fflush(stdout);
     cli->epfd = epoll_create(MAXEVENTS);                      //创建监听文件集合
     fd_add_events(cli->epfd, fileno(stdin), EPOLLIN);         //监听标准输入
     fd_add_events(cli->epfd, cli->sktfd, EPOLLIN);            //监听socket
 
     struct epoll_event evts[MAXEVENTS];
-    while(1)
+    while (1)
     {
-        int fds = epoll_wait(cli->epfd, evts, MAXEVENTS, 100);   //等待终端输入或者socket接收数据
+        int fds = epoll_wait(cli->epfd, evts, MAXEVENTS, 100); //等待终端输入或者socket接收数据
         int i;
-        for(i=0;i<fds;i++)
+        for (i = 0; i < fds; i++)
         {
             int fd = evts[i].data.fd;
-            if(fd == fileno(stdin))
+            if (fd == fileno(stdin))
             {
                 input_handler(cli);     //终端输入处理
             }
-            else if(fd == cli->sktfd)
+            else if (fd == cli->sktfd)
             {
                 socket_handler(cli);    //socket接受数据处理
             }
@@ -177,29 +178,29 @@ static int input_handler(ChatClient *cli)
 {
     int fd = fileno(stdin);
 
-    if(read(fd, inputbuf+inputs, 1) < 0)  //每次读一个字节
+    if (read(fd, inputbuf + inputs, 1) < 0)  //每次读一个字节
     {
         printf("Stdin input error!\n");
         return -1;
     }
 
-    while(inputbuf[inputs] != '\n')
+    while (inputbuf[inputs] != '\n')
     {
-    		inputs++;
-    		if(read(fd, inputbuf+inputs, 1) < 0)  //每次读一个字节
-    	    {
-    	        printf("Stdin input error!\n");
-    	        return -1;
-    	    }
+        inputs++;
+        if (read(fd, inputbuf + inputs, 1) < 0)  //每次读一个字节
+        {
+            printf("Stdin input error!\n");
+            return -1;
+        }
     }
 
-    if(inputbuf[inputs] == '\n')          //如果输入换行符，则发送数据
+    if (inputbuf[inputs] == '\n')          //如果输入换行符，则发送数据
     {
         inputbuf[inputs] = '\0';
         return input_parse(cli);
     }
-    //inputs++;
-    if(inputs == MAXLEN-1)
+    
+    if (inputs == MAXLEN - 1)
     {
         return input_parse(cli);
     }
@@ -234,20 +235,21 @@ static int input_parse(ChatClient *cli)
  */
 static int socket_handler(ChatClient *cli)
 {
-    char buf[MAXLEN] = {0};
-    if(socket_readline(cli->sktfd, buf) < 0)
+    char buf[MAXLEN] ={ 0 };
+
+    if (socket_readline(cli->sktfd, buf) < 0)
     {
         printf("Read socket error! maybe the server shutdown!\n");
         exit(0);
     }
-    if(client_parse_head(cli, buf) < 0)
+    if (client_parse_head(cli, buf) < 0)
     {
         packet_free(cli->pktget);
         cli->pktget = NULL;
         return -1;
     }
 
-    if(cli->pktstat != PKT_RDFULL)
+    if (cli->pktstat != PKT_RDFULL)
     {
         return 0;
     }
@@ -257,7 +259,41 @@ static int socket_handler(ChatClient *cli)
     printf("Time: %s\n", pkt->time);
 
     int i = 0;
-    for(i=0;i<pkt->nmsg;i++)     //发送消息信息
+
+    if(!(cli->login_stat))
+    {
+        if(!(strcmp(pkt->msg[i], "LOGOUT")))    //用户名或者密码不匹配
+        {
+            printf("> The user name %s or password is error!\n", cli->name);
+            fflush(stdout);
+            exit(0);
+        }
+        else if(!(strcmp(pkt->msg[i], "LOGOUT_ERR_PSW")))
+        {
+            printf("> The password is error!\n");
+            fflush(stdout);
+            exit(0);
+        }
+        else if(!(strcmp(pkt->msg[i], "LOGOUT_ERR_USER")))
+        {
+            printf("> The  user %s is not exist!\n", cli->name);
+            fflush(stdout);
+            exit(0);
+        }
+        else if(!(strcmp(pkt->msg[i], "LOGOUT_ERR_USER_EXIST")))
+        {
+            printf("> The  user %s is exist! Try again!\n", cli->name);
+            fflush(stdout);
+            exit(0);
+        }
+
+        else if(!(strcmp(pkt->msg[i], "LOGIN")))
+        {
+            cli->login_stat = 1;
+        }
+    }
+    
+    for (i = 0; i < pkt->nmsg; i++)     //接收到的信息
     {
         printf("  %s\n", pkt->msg[i]);
     }

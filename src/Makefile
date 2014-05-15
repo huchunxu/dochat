@@ -1,13 +1,14 @@
 all:	chatserver chatclient
 
 CC=cc
-CFLAGS= -Wall -g
+CFLAGS= -Wall -g -I/usr/include/mysql
 
-LIB_FILE=-lpthread
+LIB_FILE=-lpthread -lmysqlclient
 
 .c.o:
 	$(CC) $(CFLAGS) $(DFLAGS) -c $<
-
+	
+db_ctrl.o: db_ctrl.c db_ctrl.h
 chat_server.o: chat_server.c chat.h
 chat_parse.o: chat_parse.c chat.h
 chat_socket.o: chat_socket.c chat.h
@@ -15,10 +16,10 @@ chat_client.o: chat_client.c chat.h
 chat_server.o: chat_server.c chat.h
 
 chatclient: chat_client.o chat_parse.o chat_socket.o
-	$(CC) -o chatclient  $(DFLAGS) chat_client.o chat_parse.o chat_socket.o
+	$(CC) -o chatclient  $(CFLAGS) chat_client.o chat_parse.o chat_socket.o
 
-chatserver:	chat_server.o chat_parse.o chat_socket.o
-	$(CC) -o chatserver $(DFLAGS) chat_server.o chat_parse.o chat_socket.o $(LIB_FILE)
+chatserver:	chat_server.o chat_parse.o chat_socket.o db_ctrl.o
+	$(CC) -o chatserver $(CFLAGS) chat_server.o chat_parse.o chat_socket.o db_ctrl.o $(LIB_FILE)
 
 clean:
 	rm -f chatserver chatclient *.o *~
