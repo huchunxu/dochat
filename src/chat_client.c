@@ -7,86 +7,12 @@
  *   LastChange: 2014-05-05 16:20:53
  *      History:
  *=============================================================*/
-#include "chat.h"
+#include "chat_client.h"
 
 static char *serverip = "127.0.0.1";
 static int serverport = 8000;
 static char inputbuf[MAXLEN] ={ 0 };  //stdin输入缓存
 static int inputs = 0;
-static int input_handler(ChatClient *cli);
-static int input_parse(ChatClient *cli);
-static int socket_handler(ChatClient *cli);
-
-/**
- * @brief 帮助信息
- */
-void help()
-{
-    printf("Usage:\n");
-    printf("Example: Login: ./chatclient -u hcx -p 123456\n");
-    printf("Example: Register: ./chatclient -r -u hcx -p 123456\n");
-}
-
-/**
- * @brief 参数分析
- *
- * @param cli    客户端数据结构
- * @param argc   参数数量
- * @param argv[] 参数值
- *
- * @return 
- */
-int para_analyze(ChatClient *cli, int argc, char *argv[])
-{
-    int rflag = 0;
-    int uflag = 0;
-    int pflag = 0;
-    int hflag = 0;
-    int ch;
-    while ((ch = getopt(argc, argv, "ru:p:")) != -1)
-    {
-        switch (ch) {
-        case 'r':
-            rflag = 1;
-            printf("Trying to apply for registration...\n");
-            break;
-        case 'u':
-            uflag = 1;
-            cli->name = strdup(optarg);
-            printf("The user name %s\n", cli->name);
-            break;
-        case 'p':
-            pflag = 1;
-            cli->password = strdup(optarg);
-            printf("The password is %s\n", cli->password);
-            break;
-        case '?':
-            hflag = 1;
-            printf("Unknown option: %c\n",(char)optopt);
-            break;
-        }
-    }
-
-    if(rflag && uflag && pflag)    //注册用户
-    {
-        return  CMD_REGISTER;
-    }
-    else if(uflag && pflag)       //登陆
-    {
-        return CMD_LOGIN;
-    }
-    else if(hflag)
-    {
-        help();
-        return -1; 
-    }
-    else
-    {
-        printf("The user or the password is not input!\n");
-        help();
-        return -1; 
-    }
-}
 
 /**
  * @brief 客户端处理主函数
@@ -166,6 +92,79 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
+
+/**
+ * @brief 帮助信息
+ */
+static void help()
+{
+    printf("Usage:\n");
+    printf("Example: Login: ./chatclient -u hcx -p 123456\n");
+    printf("Example: Register: ./chatclient -r -u hcx -p 123456\n");
+}
+
+/**
+ * @brief 参数分析
+ *
+ * @param cli    客户端数据结构
+ * @param argc   参数数量
+ * @param argv[] 参数值
+ *
+ * @return 
+ */
+static int para_analyze(ChatClient *cli, int argc, char *argv[])
+{
+    int rflag = 0;
+    int uflag = 0;
+    int pflag = 0;
+    int hflag = 0;
+    int ch;
+
+    while ((ch = getopt(argc, argv, "ru:p:")) != -1)
+    {
+        switch (ch) {
+        case 'r':
+            rflag = 1;
+            printf("Trying to apply for registration...\n");
+            break;
+        case 'u':
+            uflag = 1;
+            cli->name = strdup(optarg);
+            printf("The user name %s\n", cli->name);
+            break;
+        case 'p':
+            pflag = 1;
+            cli->password = strdup(optarg);
+            printf("The password is %s\n", cli->password);
+            break;
+        case '?':
+            hflag = 1;
+            printf("Unknown option: %c\n",(char)optopt);
+            break;
+        }
+    }
+
+    if(rflag && uflag && pflag)    //注册用户
+    {
+        return  CMD_REGISTER;
+    }
+    else if(uflag && pflag)       //登陆
+    {
+        return CMD_LOGIN;
+    }
+    else if(hflag)
+    {
+        help();
+        return -1; 
+    }
+    else
+    {
+        printf("The user or the password is not input!\n");
+        help();
+        return -1; 
+    }
+}
+
 
 /**
  * @brief 输入处理函数
@@ -292,11 +291,32 @@ static int socket_handler(ChatClient *cli)
             cli->login_stat = 1;
         }
     }
-    
-    for (i = 0; i < pkt->nmsg; i++)     //接收到的信息
+
+    if(!(strcmp(pkt->msg[0], "FILE_SEND")))
     {
-        printf("  %s\n", pkt->msg[i]);
+        FILE *fp = fopen("1.txt", "w");
+        if (fp == NULL)
+        {
+            printf("File:\t%s Not Found!\n", pkt->msg[1]);
+        }
+
+        bzero(buf, MAXLEN);
+        for(i=2; i<pkt->nmsg; i++)
+        {
+            int write_length = fwrite(pkt->msg[i], sizeof(char), strlen(pkt->msg[i]), fp);
+            fwrite("\n", sizeof(char), 1, fp);
+            bzero(buf, MAXLEN);
+        }
+        fclose(fp);
     }
+    else
+    {
+        for (i = 0; i < pkt->nmsg; i++)     //接收到的信息
+        {
+            printf("  %s\n", pkt->msg[i]);
+        }
+    }
+
     packet_free(pkt);
     cli->pktget = NULL;
     printf("> %s", inputbuf);

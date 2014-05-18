@@ -1,4 +1,4 @@
-#include "chat.h"
+#include "chat_socket.h"
 
 static const char *g_cmd[CMD_LAST] = {
     [CMD_LOGIN] = "LOGIN",
@@ -99,6 +99,8 @@ int client_register(ChatClient *cli)
 int client_parse_input(ChatClient *cli, char *input)
 {
     int ret = 0;
+    int file_flag = 0;
+
     input = str_strip(input);    //去掉字符串首尾的空格
     if(input == NULL)
     {
@@ -118,6 +120,15 @@ int client_parse_input(ChatClient *cli, char *input)
         {
             cli->pktsnd = packet_new(cli->name, to);
         }
+    }
+    else if(strncmp("file to ", input, 8) == 0)
+    {
+        input += 8;
+        if(line_parse(input, ':', &to, &msg) == 0)   //以:为分隔符，将字符串分成两段
+        {
+            cli->pktsnd = packet_new(cli->name, to);
+        }
+        file_flag = 1;
     }
     else if(strcmp(input, "whoison") == 0)
     {
@@ -141,10 +152,39 @@ int client_parse_input(ChatClient *cli, char *input)
         msg = (char *) g_cmd[cmd];
     }
 
+    if(file_flag)
+    {
+        cli->pktsnd->msg[cli->pktsnd->nmsg] = strdup("FILE_SEND");  //将字符串拷贝到新的位置
+        cli->pktsnd->nmsg++;   //消息数量加1
+        cli->pktsnd->msg[cli->pktsnd->nmsg] = strdup(msg);  //将字符串拷贝到新的位置
+        cli->pktsnd->nmsg++;   //消息数量加1
+
+        FILE *fp = fopen(msg, "r");
+       char buffer[MAXLEN];
+
+		if (fp == NULL)
+		{
+			printf("File: %s Not Found!\n", msg);
+		}
+        else
+        {
+            bzero(buffer, MAXLEN);
+            while(fgets(buffer, MAXLEN, fp) != NULL)
+			{
+                cli->pktsnd->msg[cli->pktsnd->nmsg] = strdup(buffer);
+                cli->pktsnd->nmsg++;   //消息数量加1
+                bzero(buffer, MAXLEN);
+			}
+			fclose(fp);
+			printf("File:\t%s Transfer Finished!\n", msg);
+        }
+        ret = client_flush(cli);
+
+    }
     if(msg && cli->pktsnd)
     {
         cli->pktsnd->msg[cli->pktsnd->nmsg] = strdup(msg);  //将字符串拷贝到新的位置
-        cli->pktsnd ->nmsg++;   //消息数量加1
+        cli->pktsnd->nmsg++;   //消息数量加1
         ret = client_flush(cli);
         if(cmd==CMD_LOGOUT)
         {
@@ -211,6 +251,7 @@ int socket_writeline(int sktfd, char *line)
     {
         return -1;
     }
+
     if(line[len-1] != '\n')            //发送换行标志
     {
         if(write(sktfd, "\n", 1) < 1)
@@ -245,6 +286,7 @@ int socket_readline(int sktfd, char *buf)
         }
         count++;
     }
+
     return -1;
 }
 

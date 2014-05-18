@@ -114,28 +114,5 @@ typedef struct{
     pthread_mutex_t lock;
 }ChatServer;
 
-//函数声明
-int chat_add_events(ChatClient *cli, int events);
-int fd_add_events(int epfd, int fd, int events);
-int client_login(ChatClient *cli);
-char *str_strip(char *str);
-ChatPacket *packet_new(const char *from, const char *to);
-int client_flush(ChatClient *cli);
-int socket_send_head(int sktfd, HeadType type, const char *data);
-int socket_writeline(int sktfd, char *line);
-int socket_readline(int sktfd, char *buf);
-int packet_free(ChatPacket *pkt);
-char *gettime(void);
-int line_parse(char *line, char tok, char **key, char **val);
-int client_parse_head(ChatClient *cli, char *head);
-HeadType packet_head_parse(const char *head);
-char *packet_head_getdata(HeadType type, char *head);
-int chat_remove_events(ChatClient *cli);
-ServerCmd server_parse_cmd(char *msg);
-int send_to_client(ChatClient *cli, const char *msg);
-int fd_remove_events(int epfd, int fd);
-int packet_add_msg(ChatPacket *pkt, const char *msg);
-int client_parse_input(ChatClient *cli, char *input);
-int client_register(ChatClient *cli);
 
 #endif

@@ -9,11 +9,11 @@ LIB_FILE=-lpthread -lmysqlclient
 	$(CC) $(CFLAGS) $(DFLAGS) -c $<
 	
 db_ctrl.o: db_ctrl.c db_ctrl.h
-chat_server.o: chat_server.c chat.h
-chat_parse.o: chat_parse.c chat.h
-chat_socket.o: chat_socket.c chat.h
-chat_client.o: chat_client.c chat.h
-chat_server.o: chat_server.c chat.h
+chat_server.o: chat_server.c chat_server.h
+chat_parse.o: chat_parse.c chat_parse.h
+chat_socket.o: chat_socket.c chat_socket.h
+chat_client.o: chat_client.c chat_client.h
+chat_server.o: chat_server.c chat_server.h
 
 chatclient: chat_client.o chat_parse.o chat_socket.o
 	$(CC) -o chatclient  $(CFLAGS) chat_client.o chat_parse.o chat_socket.o

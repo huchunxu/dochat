@@ -7,20 +7,7 @@
  *   LastChange: 2014-05-05 09:57:50
  *      History:
  *=============================================================*/
-#include "chat.h"
-#include "db_ctrl.h"
-
-#define DEF_PORT 8000   //默认端口
-
-static int server_init(ChatServer *serv);
-static int server_run(ChatServer *serv);
-static int server_add_client(ChatServer *serv, ChatClient *cli);
-static int server_remove_client(ChatServer *serv, ChatClient *cli);
-static void *server_event_thread(void *data);
-static int server_get_msg(ChatServer *serv, ChatClient *cli);
-static int server_send_msg(ChatServer *serv, ChatClient *cli);
-static int server_packet_handler(ChatServer *serv, ChatClient *cli);
-static ChatClient *server_find_client(ChatServer *serv, const char *name);
+#include "chat_server.h"
 
 /**
  * @brief 服务器运行主函数
@@ -165,6 +152,13 @@ static int server_add_client(ChatServer *serv, ChatClient *cli)
     return 0;
 }
 
+/**
+ * @brief 监听socket的线程
+ *
+ * @param data 服务器数据
+ *
+ * @return 
+ */
 static void *server_event_thread(void *data)
 {
     ChatServer *serv = data;
@@ -192,10 +186,18 @@ static void *server_event_thread(void *data)
     return NULL;
 }
 
+/**
+ * @brief 服务器接收数据
+ *
+ * @param serv 服务器
+ * @param cli  客户端
+ *
+ * @return 
+ */
 static int server_get_msg(ChatServer *serv, ChatClient *cli)
 {
-    char buf[MAXLEN] =
-    { 0 };
+    char buf[MAXLEN] = { 0 };
+
     if (socket_readline(cli->sktfd, buf) < 0)
     {
         printf(" read socket error \n");
@@ -235,6 +237,14 @@ static int server_get_msg(ChatServer *serv, ChatClient *cli)
     return 0;
 }
 
+/**
+ * @brief 服务器端删除客户端信息
+ *
+ * @param serv 服务器数据结构
+ * @param cli  客户端数据结构
+ *
+ * @return 
+ */
 static int server_remove_client(ChatServer *serv, ChatClient *cli)
 {
     pthread_mutex_lock(&(serv->lock));
@@ -276,6 +286,14 @@ static int server_remove_client(ChatServer *serv, ChatClient *cli)
     return 0;
 }
 
+/**
+ * @brief 服务器发送数据到客户端
+ *
+ * @param serv 服务器端数据结构
+ * @param cli  客户端数据结构
+ *
+ * @return 
+ */
 static int server_send_msg(ChatServer *serv, ChatClient *cli)
 {
     client_flush(cli);
@@ -284,6 +302,14 @@ static int server_send_msg(ChatServer *serv, ChatClient *cli)
     return 0;
 }
 
+/**
+ * @brief 服务器处理客户端发送的命令
+ *
+ * @param serv 服务器端数据结构
+ * @param cli  客户端数据结构
+ *
+ * @return 
+ */
 static int server_packet_handler(ChatServer *serv, ChatClient *cli)
 {
     int ret = 0;
@@ -412,6 +438,14 @@ FAILED: packet_free(pkt);
         return ret;
 }
 
+/**
+ * @brief 在客户队列中查找相应名字的客户
+ *
+ * @param serv  服务器数据结构
+ * @param name  要查找的客户名字
+ *
+ * @return 
+ */
 static ChatClient *server_find_client(ChatServer *serv, const char *name)
 {
     ChatList *node = serv->cli_list;
