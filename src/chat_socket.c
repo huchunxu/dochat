@@ -145,9 +145,12 @@ int client_parse_input(ChatClient *cli, char *input)
     }
     else if(strcmp(input, "help") == 0)
     {
-        printf("\rto usr: msg     --------- send msg to 'usr'\n");
-        printf("whoison         --------- check server who is online\n");
-        printf("logout/bye/exit --------- logout and exit client\n");
+        printf("\rto usr: msg            --------- send msg to 'usr'\n");
+        printf("file to usr: filepath  --------- send file to 'usr'\n");
+        printf("whoison                --------- check server who is online\n");
+        printf("howuser                --------- check all users who are registered\n");
+        printf("logout/bye/exit        --------- logout and exit client\n");
+
         return 0;
     }
     else if(strcmp(input, "logout") == 0 ||
