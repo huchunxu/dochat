@@ -212,6 +212,75 @@ int match_user(char *user_name, char *pwd)
         return ERR_USER;   //不存在用户
 }
 
+/**
+ * @brief 搜索所有用户名
+ *
+ * @param name[][]
+ *
+ * @return 
+ */
+static int list_user(char *name[MAXLINK])
+{
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW mysqlrow;
+
+    int res;
+    int count = 0;
+
+    //查询数据库
+    res = mysql_query(&my_connection, "select name from users");
+    if(res)
+    {
+        fprintf(stderr, "select error: %s\n", mysql_error(&my_connection));
+        return ERR_DB;
+    }
+    else
+    {
+        res_ptr = mysql_store_result(&my_connection);
+        if(res_ptr)
+        {
+            if(mysql_num_rows(res_ptr) > 0)
+            {
+                while((mysqlrow = mysql_fetch_row(res_ptr))>0)
+                {
+                    name[count] = strdup(mysqlrow[0]);
+                    count++;
+                }
+            }
+            mysql_free_result(res_ptr);
+        }
+    }
+
+    return count;
+}
+
+/**
+ * @brief 查询所有用户
+ *
+ * @param user_name[MAXLINK]
+ *
+ * @return 
+ */
+int get_all_user(char *user_name[MAXLINK])
+{
+    int count = 0;
+    int ret = 0;
+
+    if(!database_start(MYSQL_USER, MYSQL_PSW))
+    {
+        ret = ERR_DB;  //数据库连接错误
+        return ret;
+    }
+
+    if((count = list_user(user_name)))
+        ret = count;
+    
+    database_end();
+
+    return count;
+}
+
+
 
 /**
  * @brief 检查数据库中的用户名和密码是否正确
@@ -277,3 +346,5 @@ int register_user(char *user_name, char *pwd)
 
     return ret;
 }
+
+

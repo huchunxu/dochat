@@ -4,6 +4,7 @@ static const char *g_cmd[CMD_LAST] = {
     [CMD_LOGIN] = "LOGIN",
     [CMD_REGISTER] = "REGISTER",
     [CMD_WHOISON] = "WHOISON",
+    [CMD_SHOWUSER] = "SHOWUSER",
     [CMD_LOGOUT] = "LOGOUT",
 };
 
@@ -136,6 +137,12 @@ int client_parse_input(ChatClient *cli, char *input)
         cmd = CMD_WHOISON;
         msg = (char *) g_cmd[cmd];
     }
+    else if(strcmp(input, "showuser") == 0)
+    {
+        cli->pktsnd = packet_new(cli->name, SERV_NAME);
+        cmd = CMD_SHOWUSER;
+        msg = (char *) g_cmd[cmd];
+    }
     else if(strcmp(input, "help") == 0)
     {
         printf("\rto usr: msg     --------- send msg to 'usr'\n");
@@ -155,8 +162,7 @@ int client_parse_input(ChatClient *cli, char *input)
     if(file_flag)
     {
         cli->pktsnd->type = get_msg_type(MSG_FILE_SEND);    //设置发送的是文件类型
-        cli->pktsnd->msg[cli->pktsnd->nmsg] = strdup(msg);  //将字符串拷贝到新的位置
-        cli->pktsnd->nmsg++;   //消息数量加1
+        packet_add_msg(cli->pktsnd, msg);
 
         FILE *fp = fopen(msg, "r");
         char buffer[MAXLEN];
@@ -170,8 +176,7 @@ int client_parse_input(ChatClient *cli, char *input)
             bzero(buffer, MAXLEN);
             while(fgets(buffer, MAXLEN, fp) != NULL)
 			{
-                cli->pktsnd->msg[cli->pktsnd->nmsg] = strdup(buffer);
-                cli->pktsnd->nmsg++;   //消息数量加1
+                packet_add_msg(cli->pktsnd, buffer);
                 bzero(buffer, MAXLEN);
 			}
 			fclose(fp);
@@ -182,8 +187,7 @@ int client_parse_input(ChatClient *cli, char *input)
     if(msg && cli->pktsnd)
     {
         cli->pktsnd->type = get_msg_type(MSG_TEXT_SEND);    //设置发送的是文字类型
-        cli->pktsnd->msg[cli->pktsnd->nmsg] = strdup(msg);  //将字符串拷贝到新的位置
-        cli->pktsnd->nmsg++;   //消息数量加1
+        packet_add_msg(cli->pktsnd, msg);
         ret = client_flush(cli);
         if(cmd==CMD_LOGOUT)
         {

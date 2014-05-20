@@ -296,7 +296,7 @@ static int socket_handler(ChatClient *cli)
         FILE *fp = fopen("1.txt", "w");
         if (fp == NULL)
         {
-            printf("File:\t%s Not Found!\n", pkt->msg[1]);
+            printf("File:\t%s Not Found!\n", pkt->msg[0]);
         }
 
         bzero(buf, MAXLEN);
@@ -307,6 +307,7 @@ static int socket_handler(ChatClient *cli)
             bzero(buf, MAXLEN);
         }
         fclose(fp);
+        printf("File received successful!\n");
     }
     else
     {

@@ -65,8 +65,7 @@ static int server_init(ChatServer *serv)
     serv_addr.sin_port = htons(serv->port);  //端口
 
     //绑定
-    if (bind(serv->sktfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr))
-            < 0)
+    if (bind(serv->sktfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr))< 0)
     {
         printf("Server bind error!\n");
         close(serv->sktfd);
@@ -95,11 +94,11 @@ static int server_init(ChatServer *serv)
 static int server_run(ChatServer *serv)
 {
     serv->epfd = epoll_create(MAXEVENTS);  //创建监听文件
-
+    
     while (1)
     {
         ChatClient *cli = (ChatClient *) malloc(sizeof(ChatClient));  //分配客户端资源
-        bzero(cli, sizeof(ChatClient));
+        //bzero(cli, sizeof(ChatClient));
 
         cli->epfd = serv->epfd;   //监听的文件描述符集合
         cli->sktfd = accept(serv->sktfd, (struct sockaddr *) &(cli->sktaddr),
@@ -118,7 +117,8 @@ static int server_run(ChatServer *serv)
             continue;
         }
 
-        server_add_client(serv, cli);          //添加客户到链表
+        server_add_client(serv, cli);           //添加客户到在线链表
+
         if (serv->pid == 0)
         {
             pthread_create(&(serv->pid), NULL, server_event_thread, serv); //创建一个线程，监听是否有客户活动
@@ -151,6 +151,7 @@ static int server_add_client(ChatServer *serv, ChatClient *cli)
 
     return 0;
 }
+
 
 /**
  * @brief 监听socket的线程
@@ -227,13 +228,22 @@ static int server_get_msg(ChatServer *serv, ChatClient *cli)
         return server_packet_handler(serv, cli);
     }
     ChatClient *tocli = server_find_client(serv, cli->pktget->to);
-    if (tocli == NULL)
+    if (tocli == NULL)   //离线消息
     {
+        printf("%s is offline, the message will be sent when %s login!\n", cli->pktget->to, cli->pktget->to);
+
+        serv->msg_offline[serv->nmsg_offline] = cli->pktget;
+        serv->nmsg_offline++;
+        cli->pktget = NULL;
+
         return -1;
     }
-    tocli->pktsnd = cli->pktget;
-    cli->pktget = NULL;
-    chat_add_events(tocli, EPOLLOUT);
+    else                 //在线消息
+    {
+        tocli->pktsnd = cli->pktget;
+        cli->pktget = NULL;
+        chat_add_events(tocli, EPOLLOUT);
+    }
     return 0;
 }
 
@@ -286,6 +296,7 @@ static int server_remove_client(ChatServer *serv, ChatClient *cli)
     return 0;
 }
 
+
 /**
  * @brief 服务器发送数据到客户端
  *
@@ -314,6 +325,7 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
 {
     int ret = 0;
     int user_id = 0;
+    int i;
     MsgType msg_type = MSG_TEXT_SEND;
 
     ChatPacket *pkt = cli->pktget;
@@ -340,14 +352,32 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                 cli->name = strdup(pkt->from);     //获取用户名
                 cli->password = pkt->msg[1];       //获取密码
                 char buf[MAXLEN] ={0};
-               
+                
                 if((user_id = check_user(cli->name, cli->password)) > 0)
                 {
                     printf("Check success. The user id is %d\n", user_id);
-                    msg_type = MSG_LOGIN;
-                    send_to_client(cli, buf, msg_type);
-                    sprintf(buf, "hello %s! you can use 'help' now!\n", cli->name);
                     printf(" client %s login\n", cli->name);
+
+                    ChatPacket *pktsnd = packet_new(SERV_NAME, cli->name);
+                    pktsnd->time = gettime();
+                    pktsnd->type = get_msg_type(MSG_LOGIN);
+                    
+                    sprintf(buf, "hello %s! you can use 'help' now!\n", cli->name);
+                    packet_add_msg(pktsnd, buf);
+                    
+                    cli->pktsnd = pktsnd;
+                    client_flush(cli);
+
+                    for(i=0; i<serv->nmsg_offline; i++)
+                    {
+                        if(strcmp(serv->msg_offline[i]->to, cli->name) == 0)
+                        {
+                            cli->pktsnd = serv->msg_offline[i];
+                            client_flush(cli);
+                        }
+                    }
+
+                    break;
                 }
                 else if(user_id == ERR_PWD)
                 {
@@ -381,7 +411,7 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                 cli->name = strdup(pkt->from);     //获取用户名
                 cli->password = pkt->msg[1];       //获取密码
                 char buf[MAXLEN] ={ 0 };
-                
+
                 if((user_id = register_user(cli->name, cli->password)) > 0)
                 {
                     msg_type = MSG_LOGIN;
@@ -402,9 +432,9 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                     msg_type = MSG_LOGOUT;
                     server_remove_client(serv, cli);
                 }
-               
+
                 send_to_client(cli, buf, msg_type);
-                
+
                 break;
             }
         case CMD_WHOISON:
@@ -422,6 +452,25 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                         packet_add_msg(pktsnd, client->name);
                     }
                     node = node->next;
+                }
+                cli->pktsnd = pktsnd;
+                client_flush(cli);
+                break;
+            }
+        case CMD_SHOWUSER:
+            {
+                char *user_name[MAXLINK];
+                printf(" client %s show all users\n", cli->name);
+                ChatPacket *pktsnd = packet_new(SERV_NAME, cli->name);
+                pktsnd->time = gettime();
+                pktsnd->type = get_msg_type(MSG_TEXT_SEND);
+
+                int user_count = get_all_user(user_name);
+                user_count--;
+                while(user_count>=0)
+                {
+                    packet_add_msg(pktsnd, user_name[user_count]);
+                    user_count --;
                 }
                 cli->pktsnd = pktsnd;
                 client_flush(cli);
@@ -463,4 +512,3 @@ static ChatClient *server_find_client(ChatServer *serv, const char *name)
 
     return NULL;
 }
-

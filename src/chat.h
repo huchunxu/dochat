@@ -67,6 +67,7 @@ typedef enum{
     CMD_LOGIN,
     CMD_REGISTER,
     CMD_WHOISON,
+    CMD_SHOWUSER,
     CMD_LOGOUT,
     CMD_LAST,
 }ServerCmd;
@@ -122,6 +123,8 @@ typedef struct{
     int maxwait;
     int port;
     ChatList *cli_list;
+    ChatPacket *msg_offline[MAXMSG];
+    int nmsg_offline;
     int sktfd;
     int epfd;
     pthread_t pid;

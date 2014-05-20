@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "mysql.h"
-
+#include "chat.h"
 
 #define ERR_DB   -1
 #define ERR_USER -2
@@ -19,5 +19,6 @@ int create_user(char *user_name, char *pwd);
 int match_user(char *user_name, char *pwd);
 int check_user(char *user_name, char *pwd);
 int register_user(char *user_name, char *pwd);
+int get_all_user(char *user_name[MAXLINK]);
 
 #endif

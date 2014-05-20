@@ -212,17 +212,52 @@ static int match_user(char *user_name, char *pwd)
         return -2;   //不存在用户
 }
 
+static int list_user(char name[][30])
+{
+    MYSQL_RES *res_ptr;
+    MYSQL_ROW mysqlrow;
+
+    int res;
+    int count = 0;
+
+    //查询数据库
+    res = mysql_query(&my_connection, "select name from users");
+    if(res)
+    {
+        fprintf(stderr, "select error: %s\n", mysql_error(&my_connection));
+        return 0;
+    }
+    else
+    {
+        res_ptr = mysql_store_result(&my_connection);
+        if(res_ptr)
+        {
+            if(mysql_num_rows(res_ptr) > 0)
+            {
+                while(mysqlrow = mysql_fetch_row(res_ptr))
+                {
+                    strcpy(name[count], mysqlrow[0]);
+                    count++;
+                }
+            }
+            mysql_free_result(res_ptr);
+        }
+    }
+
+    return count;
+}
 
 int main()
 {
     int user_id = 0;
+    char name[100][30] = {0};
 
     if(database_start("root", "hcxxxr"))
     {
         printf("Database connect success\n");
     }
 
-    if((user_id = match_user("hx", "hcxxr")) > 0)
+    /*if((user_id = match_user("hx", "hcxxr")) > 0)
     {
         printf("user id is %d", user_id);
     }
@@ -230,7 +265,8 @@ int main()
     {
         //user_id = create_user("hc", "123456");
         printf("Create successful. user id is %d", user_id);
-    }
+    }*/
+    list_user(name);
     
     database_end();
 }
