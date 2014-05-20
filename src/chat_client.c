@@ -146,7 +146,7 @@ static int para_analyze(ChatClient *cli, int argc, char *argv[])
 
     if(rflag && uflag && pflag)    //注册用户
     {
-        return  CMD_REGISTER;
+        return CMD_REGISTER;
     }
     else if(uflag && pflag)       //登陆
     {
@@ -258,41 +258,40 @@ static int socket_handler(ChatClient *cli)
     printf("Time: %s\n", pkt->time);
 
     int i = 0;
-
+    int msg_type = packet_msg_parse(pkt->type);
     if(!(cli->login_stat))
     {
-        if(!(strcmp(pkt->msg[i], "LOGOUT")))    //用户名或者密码不匹配
+        switch(msg_type)
         {
-            printf("> The user name %s or password is error!\n", cli->name);
-            fflush(stdout);
-            exit(0);
-        }
-        else if(!(strcmp(pkt->msg[i], "LOGOUT_ERR_PSW")))
-        {
-            printf("> The password is error!\n");
-            fflush(stdout);
-            exit(0);
-        }
-        else if(!(strcmp(pkt->msg[i], "LOGOUT_ERR_USER")))
-        {
-            printf("> The  user %s is not exist!\n", cli->name);
-            fflush(stdout);
-            exit(0);
-        }
-        else if(!(strcmp(pkt->msg[i], "LOGOUT_ERR_USER_EXIST")))
-        {
-            printf("> The  user %s is exist! Try again!\n", cli->name);
-            fflush(stdout);
-            exit(0);
-        }
-
-        else if(!(strcmp(pkt->msg[i], "LOGIN")))
-        {
-            cli->login_stat = 1;
+            case MSG_LOGOUT:
+                printf("> The user name %s or password is error!\n", cli->name);
+                fflush(stdout);
+                exit(0);
+                break;
+            case MSG_LOGOUT_ERR_PSW:
+                printf("> The password is error!\n");
+                fflush(stdout);
+                exit(0);
+                break;
+            case MSG_LOGOUT_ERR_USER:
+                printf("> The  user %s is not exist!\n", cli->name);
+                fflush(stdout);
+                exit(0);
+                break;
+            case MSG_LOGOUT_ERR_USER_EXIST:
+                printf("> The  user %s is exist! Try again!\n", cli->name);
+                fflush(stdout);
+                exit(0);
+                break;
+            case MSG_LOGIN:
+                cli->login_stat = 1;
+                break;
+            default:
+                break;
         }
     }
 
-    if(!(strcmp(pkt->msg[0], "FILE_SEND")))
+    if(msg_type == MSG_FILE_SEND)
     {
         FILE *fp = fopen("1.txt", "w");
         if (fp == NULL)
@@ -301,9 +300,9 @@ static int socket_handler(ChatClient *cli)
         }
 
         bzero(buf, MAXLEN);
-        for(i=2; i<pkt->nmsg; i++)
+        for(i=1; i<pkt->nmsg; i++)
         {
-            int write_length = fwrite(pkt->msg[i], sizeof(char), strlen(pkt->msg[i]), fp);
+            fwrite(pkt->msg[i], sizeof(char), strlen(pkt->msg[i]), fp);
             fwrite("\n", sizeof(char), 1, fp);
             bzero(buf, MAXLEN);
         }

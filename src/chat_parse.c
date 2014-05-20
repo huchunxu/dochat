@@ -4,10 +4,21 @@ static const char *g_head[HEAD_LAST] = {
     [HEAD_START] = "START",
     [HEAD_TO] = "TO:",
     [HEAD_FROM] = "FROM:",
+    [HEAD_TYPE] = "TYPE:",
     [HEAD_MSG] = "MSG:",
     [HEAD_TIME] = "TIME:",
     [HEAD_FDBK] = "FDBK:",
     [HEAD_END] = "END",
+};
+
+static const char *g_msg_type[MSG_LAST] = {
+    [MSG_LOGIN] = "LOGIN",
+    [MSG_LOGOUT] = "LOGOUT",
+    [MSG_LOGOUT_ERR_PSW] = "LOGOUT_ERR_PSW",
+    [MSG_LOGOUT_ERR_USER] = "LOGOUT_ERR_USER",
+    [MSG_LOGOUT_ERR_USER_EXIST] = "LOGOUT_ERR_USER_EXIST",
+    [MSG_FILE_SEND] = "FILE_SEND",
+    [MSG_TEXT_SEND] = "TEXT_SEND",
 };
 
 /**
@@ -119,6 +130,29 @@ HeadType packet_head_parse(const char *head)
     return type;
 }
 
+MsgType packet_msg_parse(const char *msg_type)
+{
+    if(msg_type == NULL || *msg_type=='\0')
+    {
+        return MSG_LAST;
+    }
+
+    MsgType type;
+    for(type=0;type<MSG_LAST;type++)
+    {
+        //int len = strlen(g_msg_type[type]);
+        if(strcmp(msg_type, g_msg_type[type]) == 0)
+            break;
+    }
+
+    return type;
+}
+
+char *get_msg_type(MsgType type)
+{
+    //char buf[MAXLEN] = {0};
+    return strdup(g_msg_type[type]);
+}
 /**
  * @brief 接收数据
  *

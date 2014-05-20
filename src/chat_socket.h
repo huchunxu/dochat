@@ -18,7 +18,7 @@ char *gettime(void);
 int client_parse_head(ChatClient *cli, char *head);
 int chat_remove_events(ChatClient *cli);
 ServerCmd server_parse_cmd(char *msg);
-int send_to_client(ChatClient *cli, const char *msg);
+int send_to_client(ChatClient *cli, const char *msg, MsgType msg_type);
 
 
 #endif

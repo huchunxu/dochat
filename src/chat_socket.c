@@ -154,13 +154,12 @@ int client_parse_input(ChatClient *cli, char *input)
 
     if(file_flag)
     {
-        cli->pktsnd->msg[cli->pktsnd->nmsg] = strdup("FILE_SEND");  //将字符串拷贝到新的位置
-        cli->pktsnd->nmsg++;   //消息数量加1
+        cli->pktsnd->type = get_msg_type(MSG_FILE_SEND);    //设置发送的是文件类型
         cli->pktsnd->msg[cli->pktsnd->nmsg] = strdup(msg);  //将字符串拷贝到新的位置
         cli->pktsnd->nmsg++;   //消息数量加1
 
         FILE *fp = fopen(msg, "r");
-       char buffer[MAXLEN];
+        char buffer[MAXLEN];
 
 		if (fp == NULL)
 		{
@@ -179,10 +178,10 @@ int client_parse_input(ChatClient *cli, char *input)
 			printf("File:\t%s Transfer Finished!\n", msg);
         }
         ret = client_flush(cli);
-
     }
     if(msg && cli->pktsnd)
     {
+        cli->pktsnd->type = get_msg_type(MSG_TEXT_SEND);    //设置发送的是文字类型
         cli->pktsnd->msg[cli->pktsnd->nmsg] = strdup(msg);  //将字符串拷贝到新的位置
         cli->pktsnd->nmsg++;   //消息数量加1
         ret = client_flush(cli);
@@ -216,6 +215,7 @@ int client_flush(ChatClient *cli)
     if((ret=socket_send_head(cli->sktfd, HEAD_TO,    pkt->to))<0)    goto FAILED;
     if((ret=socket_send_head(cli->sktfd, HEAD_TIME,  pkt->time))<0)  goto FAILED;
     if((ret=socket_send_head(cli->sktfd, HEAD_FDBK,  pkt->fdbk))<0)  goto FAILED;
+    if((ret=socket_send_head(cli->sktfd, HEAD_TYPE,  pkt->type))<0)  goto FAILED;
     
     int i;
     for(i=0;i<(cli->pktsnd->nmsg);i++)
@@ -376,6 +376,9 @@ int client_parse_head(ChatClient *cli, char *head)
         case HEAD_FROM:
             cli->pktget->from = strdup(data);
             break;
+        case HEAD_TYPE:
+            cli->pktget->type = strdup(data);
+            break;
         case HEAD_MSG:
             packet_add_msg(cli->pktget, data);
             break;
@@ -386,10 +389,11 @@ int client_parse_head(ChatClient *cli, char *head)
             cli->pktget->fdbk = strdup(data);
             break;
         case HEAD_END:
-            if(cli->pktget->fdbk==NULL && cli->pktget->nmsg==0)
-            {
-                return -1;
-            }
+            //if(cli->pktget->fdbk==NULL && cli->pktget->nmsg==0)
+            //if(cli->pktget->fdbk==NULL)
+            //{
+                //return -1;
+            //}
 
             if(cli->pktget->from == NULL)
             {
@@ -438,12 +442,13 @@ ServerCmd server_parse_cmd(char *msg)
     return CMD_LAST;
 }
 
-int send_to_client(ChatClient *cli, const char *msg)
+int send_to_client(ChatClient *cli, const char *msg, MsgType msg_type)
 {
     ChatPacket *pkt = packet_new(SERV_NAME, cli->name);
     pkt->nmsg = 1;
     pkt->msg[0] = strdup(msg);
     pkt->time = gettime();
+    pkt->type = get_msg_type(msg_type);
     cli->pktsnd = pkt;
     return client_flush(cli);
 }

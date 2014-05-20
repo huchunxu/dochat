@@ -42,12 +42,26 @@ typedef enum{
     HEAD_START = 0,
     HEAD_TO,
     HEAD_FROM,
+    HEAD_TYPE,
     HEAD_MSG,
     HEAD_TIME,
     HEAD_FDBK,
     HEAD_END,
     HEAD_LAST,
 }HeadType;
+
+//发送的消息类型
+typedef enum{
+    MSG_LOGIN,
+    MSG_LOGOUT,
+    MSG_LOGOUT_ERR_PSW,
+    MSG_LOGOUT_ERR_USER,
+    MSG_LOGOUT_ERR_USER_EXIST,
+    MSG_FILE_SEND,
+    MSG_TEXT_SEND,
+    MSG_LAST,
+}MsgType;
+
 
 typedef enum{
     CMD_LOGIN,
@@ -67,7 +81,6 @@ typedef enum{
     PKT_OTHER,
 }PktStatus;
 
-
 //信息数据包结构
 typedef struct{
     char *to;
@@ -75,6 +88,7 @@ typedef struct{
     char *time;
     int nmsg;
     int curmsg;
+    char *type;
     char *msg[MAXMSG];
     char *fdbk;
 }ChatPacket;

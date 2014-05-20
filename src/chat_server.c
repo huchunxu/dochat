@@ -314,6 +314,7 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
 {
     int ret = 0;
     int user_id = 0;
+    MsgType msg_type = MSG_TEXT_SEND;
 
     ChatPacket *pkt = cli->pktget;
     if (pkt == NULL)
@@ -338,36 +339,36 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                 }
                 cli->name = strdup(pkt->from);     //获取用户名
                 cli->password = pkt->msg[1];       //获取密码
-                char buf[MAXLEN] ={ 0 };
+                char buf[MAXLEN] ={0};
                
                 if((user_id = check_user(cli->name, cli->password)) > 0)
                 {
                     printf("Check success. The user id is %d\n", user_id);
-                    sprintf(buf, "LOGIN");
-                    send_to_client(cli, buf);
+                    msg_type = MSG_LOGIN;
+                    send_to_client(cli, buf, msg_type);
                     sprintf(buf, "hello %s! you can use 'help' now!\n", cli->name);
                     printf(" client %s login\n", cli->name);
                 }
                 else if(user_id == ERR_PWD)
                 {
                     printf("The password is error!\n");
-                    sprintf(buf, "LOGOUT_ERR_PSW");
+                    msg_type = MSG_LOGOUT_ERR_PSW;
                     server_remove_client(serv, cli);
                 }
                 else if(user_id == ERR_USER)
                 {
                     printf("The user %s is not exist!\n", cli->name);
-                    sprintf(buf, "LOGOUT_ERR_USER");
+                    msg_type = MSG_LOGOUT_ERR_USER;
                     server_remove_client(serv, cli);
                 }
                 else
                 {
                     printf("The user name %s or password is error! Error id: %d\n",cli->name, user_id);
-                    sprintf(buf, "LOGOUT");
+                    msg_type = MSG_LOGOUT;
                     server_remove_client(serv, cli);
                 }
 
-                send_to_client(cli, buf);
+                send_to_client(cli, buf, msg_type);
                 break;
             }
         case CMD_REGISTER:
@@ -383,8 +384,8 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                 
                 if((user_id = register_user(cli->name, cli->password)) > 0)
                 {
-                    sprintf(buf, "LOGIN");
-                    send_to_client(cli, buf);
+                    msg_type = MSG_LOGIN;
+                    send_to_client(cli, buf, MSG_LOGIN);
                     printf("Regiser user! name: %s, password: %s\n", cli->name, cli->password);
                     sprintf(buf, "hello %s! The user register successful! you can use 'help' now!\n", cli->name);
                     printf(" client %s login\n", cli->name);
@@ -392,17 +393,17 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                 else if (user_id == ERR_USER)
                 {
                     printf("The user %s is exist!\n", cli->name);
-                    sprintf(buf, "LOGOUT_ERR_USER_EXIST");
+                    msg_type = MSG_LOGOUT_ERR_USER_EXIST;
                     server_remove_client(serv, cli);
                 }
                 else
                 {
                     printf("The user name %s or password is error! Error id: %d\n",cli->name, user_id);
-                    sprintf(buf, "LOGOUT");
+                    msg_type = MSG_LOGOUT;
                     server_remove_client(serv, cli);
                 }
                
-                send_to_client(cli, buf);
+                send_to_client(cli, buf, msg_type);
                 
                 break;
             }
@@ -411,6 +412,7 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                 printf(" client %s check who is online\n", cli->name);
                 ChatPacket *pktsnd = packet_new(SERV_NAME, cli->name);
                 pktsnd->time = gettime();
+                pktsnd->type = get_msg_type(MSG_TEXT_SEND);
                 ChatList *node = serv->cli_list;
                 while (node && node->data)
                 {
