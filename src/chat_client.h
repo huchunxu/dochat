@@ -3,11 +3,12 @@
 
 #include "chat.h"
 #include "chat_parse.h"
+#include <gtk/gtk.h>
 
 static int input_handler(ChatClient *cli);
 static int input_parse(ChatClient *cli);
 static int socket_handler(ChatClient *cli);
 static int para_analyze(ChatClient *cli, int argc, char *argv[]);
 static void help();
-
+void client_main(gpointer data);
 #endif

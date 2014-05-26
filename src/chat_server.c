@@ -442,7 +442,7 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                 printf(" client %s check who is online\n", cli->name);
                 ChatPacket *pktsnd = packet_new(SERV_NAME, cli->name);
                 pktsnd->time = gettime();
-                pktsnd->type = get_msg_type(MSG_TEXT_SEND);
+                pktsnd->type = get_msg_type(MSG_USER_ONLINE);
                 ChatList *node = serv->cli_list;
                 while (node && node->data)
                 {
@@ -463,8 +463,7 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                 printf(" client %s show all users\n", cli->name);
                 ChatPacket *pktsnd = packet_new(SERV_NAME, cli->name);
                 pktsnd->time = gettime();
-                pktsnd->type = get_msg_type(MSG_TEXT_SEND);
-
+                pktsnd->type = get_msg_type(MSG_USER_ALL);
                 int user_count = get_all_user(user_name);
                 user_count--;
                 while(user_count>=0)

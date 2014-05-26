@@ -8,9 +8,10 @@
  *      History:
  *=============================================================*/
 #include "chat_client.h"
+#include "interface.h"
 
-static char *serverip = "127.0.0.1";
-static int serverport = 8000;
+//static char *serverip = "127.0.0.1";
+//static int serverport = 8000;
 static char inputbuf[MAXLEN] ={ 0 };  //stdin输入缓存
 static int inputs = 0;
 
@@ -22,10 +23,9 @@ static int inputs = 0;
  *
  * @return 
  */
-int main(int argc, char *argv[])
+void client_main(gpointer data)
 {
-    int para_mode = 0;
-
+    /*
     ChatClient *cli = (ChatClient *) malloc(sizeof(ChatClient));   //客户端分配资源
     if (cli == NULL)
     {
@@ -72,6 +72,8 @@ int main(int argc, char *argv[])
     fd_add_events(cli->epfd, fileno(stdin), EPOLLIN);         //监听标准输入
     fd_add_events(cli->epfd, cli->sktfd, EPOLLIN);            //监听socket
 
+    */
+    ChatClient *cli = (ChatClient *)data; 
     struct epoll_event evts[MAXEVENTS];
     while (1)
     {
@@ -90,7 +92,6 @@ int main(int argc, char *argv[])
             }
         }
     }
-    return 0;
 }
 
 /**
@@ -112,6 +113,7 @@ static void help()
  *
  * @return 
  */
+/*
 static int para_analyze(ChatClient *cli, int argc, char *argv[])
 {
     int rflag = 0;
@@ -164,7 +166,7 @@ static int para_analyze(ChatClient *cli, int argc, char *argv[])
         return -1; 
     }
 }
-
+*/
 
 /**
  * @brief 输入处理函数
@@ -266,55 +268,89 @@ static int socket_handler(ChatClient *cli)
             case MSG_LOGOUT:
                 printf("> The user name %s or password is error!\n", cli->name);
                 fflush(stdout);
-                exit(0);
+                //exit(0);
+                gdk_threads_enter();
+                login_dialog_create();
+                gdk_threads_leave();  
                 break;
             case MSG_LOGOUT_ERR_PSW:
                 printf("> The password is error!\n");
                 fflush(stdout);
-                exit(0);
+                //exit(0);
+                gdk_threads_enter();
+                login_dialog_create();
+                gdk_threads_leave();  
                 break;
             case MSG_LOGOUT_ERR_USER:
                 printf("> The  user %s is not exist!\n", cli->name);
                 fflush(stdout);
-                exit(0);
+                //exit(0);
+                gdk_threads_enter();
+                login_dialog_create();
+                gdk_threads_leave();  
                 break;
             case MSG_LOGOUT_ERR_USER_EXIST:
                 printf("> The  user %s is exist! Try again!\n", cli->name);
                 fflush(stdout);
-                exit(0);
+                //exit(0);
+                gdk_threads_enter();
+                login_dialog_create();
+                gdk_threads_leave();  
                 break;
             case MSG_LOGIN:
                 cli->login_stat = 1;
+                gdk_threads_enter();
+                client_parse_input(cli, "whoison");
+                main_window_create();
+                gtk_widget_show_all(main_window);
+                gtk_widget_hide_all(login_window);
+                gdk_threads_leave();  
                 break;
             default:
                 break;
         }
     }
 
-    if(msg_type == MSG_FILE_SEND)
+    switch(msg_type)
     {
-        FILE *fp = fopen("1.txt", "w");
-        if (fp == NULL)
-        {
-            printf("File:\t%s Not Found!\n", pkt->msg[0]);
-        }
+        case MSG_FILE_SEND:
+            {
+                FILE *fp = fopen("1.txt", "w");
+                if (fp == NULL)
+                {
+                    printf("File:\t%s Not Found!\n", pkt->msg[0]);
+                }
 
-        bzero(buf, MAXLEN);
-        for(i=1; i<pkt->nmsg; i++)
-        {
-            fwrite(pkt->msg[i], sizeof(char), strlen(pkt->msg[i]), fp);
-            fwrite("\n", sizeof(char), 1, fp);
-            bzero(buf, MAXLEN);
-        }
-        fclose(fp);
-        printf("File received successful!\n");
-    }
-    else
-    {
-        for (i = 0; i < pkt->nmsg; i++)     //接收到的信息
-        {
-            printf("  %s\n", pkt->msg[i]);
-        }
+                bzero(buf, MAXLEN);
+                for(i=1; i<pkt->nmsg; i++)
+                {
+                    fwrite(pkt->msg[i], sizeof(char), strlen(pkt->msg[i]), fp);
+                    fwrite("\n", sizeof(char), 1, fp);
+                    bzero(buf, MAXLEN);
+                }
+                fclose(fp);
+                printf("File received successful!\n");
+                break;
+            }
+        case MSG_USER_ONLINE:
+            {
+                
+                printf("MSG_USER_ONLINE:\n");
+                break;
+            }
+        case MSG_USER_ALL:
+            {
+                printf("MSG_USER_ALL:\n");
+                break;
+            }
+        default:
+            {
+                for (i = 0; i < pkt->nmsg; i++)     //接收到的信息
+                {
+                    printf("  %s\n", pkt->msg[i]);
+                }
+                break;
+            }
     }
 
     packet_free(pkt);

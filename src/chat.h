@@ -59,6 +59,9 @@ typedef enum{
     MSG_LOGOUT_ERR_USER_EXIST,
     MSG_FILE_SEND,
     MSG_TEXT_SEND,
+    MSG_USER_ONLINE,
+    MSG_USER_OFFLINE,
+    MSG_USER_ALL,
     MSG_LAST,
 }MsgType;
 

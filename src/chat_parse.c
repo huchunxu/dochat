@@ -19,6 +19,9 @@ static const char *g_msg_type[MSG_LAST] = {
     [MSG_LOGOUT_ERR_USER_EXIST] = "LOGOUT_ERR_USER_EXIST",
     [MSG_FILE_SEND] = "FILE_SEND",
     [MSG_TEXT_SEND] = "TEXT_SEND",
+    [MSG_USER_ONLINE] = "USR_ONLINE",
+    [MSG_USER_OFFLINE] = "USER_OFFLINE",
+    [MSG_USER_ALL] = "USER_ALL",
 };
 
 /**
