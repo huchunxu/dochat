@@ -15,6 +15,9 @@ static char *serverip = "127.0.0.1";
 static int serverport = 8000;
 
 const char * password = "secret";
+
+ChatClient *cli;
+
 /**
  * @brief 退出
  *
@@ -47,7 +50,7 @@ void login_button_clicked (GtkWidget *button, gpointer data)
     const char *password_text = gtk_entry_get_text(GTK_ENTRY(login_entry.password_entry));
     const char *username_text = gtk_entry_get_text(GTK_ENTRY(login_entry.username_entry));
  
-    ChatClient *cli = (ChatClient *) malloc(sizeof(ChatClient));   //客户端分配资源
+    cli = (ChatClient *) malloc(sizeof(ChatClient));   //客户端分配资源
     if (cli == NULL)
     {
         printf("[%s]: failed to malloc\n", username_text);
@@ -81,32 +84,15 @@ void login_button_clicked (GtkWidget *button, gpointer data)
     fd_add_events(cli->epfd, cli->sktfd, EPOLLIN);            //监听socket
  
     g_thread_new("client_main", (GThreadFunc)client_main,  cli);
-
-    
-    /*if (strcmp(password_text, password) == 0)
-    {
-        printf("Access granted!\n");
-
-        main_window_create();
-        gtk_widget_show_all(main_window);
-        gtk_widget_hide_all(login_window);
-    }
-    else
-    {
-        printf("Access denied!\n");
-        login_dialog_create();
-    }*/
 }
 
-void view_onRowActivated (GtkTreeView *treeview,
+void list_row_activated(GtkTreeView *treeview,
         GtkTreePath *path,
         GtkTreeViewColumn *col,
         gpointer userdata)
 {
     GtkTreeModel *model;
     GtkTreeIter iter;
-
-    g_print ("A row has been double-clicked!\n");
 
     model = gtk_tree_view_get_model(treeview);
 
@@ -115,10 +101,36 @@ void view_onRowActivated (GtkTreeView *treeview,
         gchar *name;
 
         gtk_tree_model_get(model, &iter, COLUMN, &name, -1);
-
-        gtk_statusbar_push(GTK_STATUSBAR(userdata), gtk_statusbar_get_context_id(GTK_STATUSBAR(userdata),  
-                    name), name); 
+        
+        if(strcmp(name, "在线好友") != 0)
+        {
+            talk_window_create(name);
+        }
+        gtk_statusbar_push(GTK_STATUSBAR(userdata), 
+                gtk_statusbar_get_context_id(GTK_STATUSBAR(userdata), name), name); 
         g_print ("Double-clicked row contains name %s\n", name);
         g_free(name);
     }
+}
+
+void send_button_clicked(GtkWidget * widget, gpointer data)
+{
+	char *text;
+    int num = (int)data;
+	GtkTextIter start, end;
+
+	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(allmsg[num].buffer_down), &start, &end);	/*获得缓冲区开始和结束位置的Iter */
+	const GtkTextIter s = start, e = end;
+	text = (char *)gtk_text_buffer_get_text(GTK_TEXT_BUFFER(allmsg[num].buffer_down), &s, &e, FALSE);	/*获得文本框缓冲区文本 */
+    char send_text[MAXLEN];
+    sprintf(send_text, "to %s:", allmsg[0].to_name);
+    strcat(send_text, text);    
+    printf("%s\n",send_text);
+    client_parse_input(cli, send_text);
+    gtk_text_buffer_set_text(GTK_TEXT_BUFFER(allmsg[0].buffer_down), "", -1);  //清空缓冲区
+}
+
+void talk_close_button_clicked(GtkWidget * widget, gpointer data)
+{
+    gtk_widget_destroy((GtkWidget *)data);
 }

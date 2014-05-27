@@ -62,6 +62,7 @@ typedef enum{
     MSG_USER_ONLINE,
     MSG_USER_OFFLINE,
     MSG_USER_ALL,
+    MSG_CHECK_USER_ONLINE,
     MSG_LAST,
 }MsgType;
 

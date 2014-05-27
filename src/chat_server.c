@@ -377,6 +377,21 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                         }
                     }
 
+                    //请求其他客户检测，更新登陆列表
+                    ChatList *node = serv->cli_list;
+                    msg_type = MSG_CHECK_USER_ONLINE;
+                    while (node && node->data)
+                    {
+                        ChatClient *client = node->data;
+                        if (client != cli)
+                        {
+                            sprintf(buf, "Please check whoison\n");
+                            send_to_client(client, buf, msg_type);
+                        }
+                        node = node->next;
+                    }
+
+
                     break;
                 }
                 else if(user_id == ERR_PWD)
@@ -439,6 +454,10 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
             }
         case CMD_WHOISON:
             {
+                char *user_online[MAXMSG] = {NULL};
+                int counter = 0;
+                //char buf[MAXLEN] ={0};
+
                 printf(" client %s check who is online\n", cli->name);
                 ChatPacket *pktsnd = packet_new(SERV_NAME, cli->name);
                 pktsnd->time = gettime();
@@ -450,11 +469,29 @@ static int server_packet_handler(ChatServer *serv, ChatClient *cli)
                     if (client != cli)
                     {
                         packet_add_msg(pktsnd, client->name);
+                        user_online[counter] = strdup(client->name);
+                        counter ++;
                     }
                     node = node->next;
                 }
                 cli->pktsnd = pktsnd;
                 client_flush(cli);
+
+                /*
+                node = serv->cli_list;
+                msg_type = MSG_CHECK_USER_ONLINE;
+                while (node && node->data)
+                {
+                    ChatClient *client = node->data;
+                    if (client != cli)
+                    {
+                        sprintf(buf, "Please check whoison\n");
+                        send_to_client(client, buf, msg_type);
+                    }
+                    node = node->next;
+                }
+                */
+                
                 break;
             }
         case CMD_SHOWUSER:

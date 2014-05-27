@@ -22,6 +22,7 @@ static const char *g_msg_type[MSG_LAST] = {
     [MSG_USER_ONLINE] = "USR_ONLINE",
     [MSG_USER_OFFLINE] = "USER_OFFLINE",
     [MSG_USER_ALL] = "USER_ALL",
+    [MSG_CHECK_USER_ONLINE] = "CHECK_USER_ALL",
 };
 
 /**

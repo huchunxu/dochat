@@ -15,6 +15,7 @@ GtkWidget *login_window;
 GtkWidget *user_view;
 
 struct login_entry_msg login_entry;
+struct talk_msg allmsg[10];
 
 /**
  * @brief 登陆界面的设计
@@ -129,7 +130,46 @@ static GtkWidget *create_view_and_model(void)
     return view;
 }
 
-static void remove_all_user(GtkWidget *list)
+void update_user_online(GtkWidget *list, char *user_online[])
+{
+    GtkListStore *store;
+    GtkTreeIter toplevel, child;
+    int i = 0;
+
+    store = GTK_TREE_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW (list)));
+
+    gtk_tree_store_append(store, &toplevel, NULL);
+    gtk_tree_store_set(store, &toplevel, COLUMN, "在线好友", -1);
+
+    while(user_online[i] != NULL)
+    {
+        gtk_tree_store_append(store, &child, &toplevel);
+        gtk_tree_store_set(store, &child, COLUMN, user_online[i], -1);
+        i++;
+    }
+}
+
+void update_user_offline(GtkWidget *list, char *user_offline[])
+{
+    GtkListStore *store;
+    GtkTreeIter toplevel, child;
+    int i = 0;
+
+    store = GTK_TREE_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW (list)));
+
+    gtk_tree_store_append(store, &toplevel, NULL);
+    gtk_tree_store_set(store, &toplevel, COLUMN, "离线好友", -1);
+      
+    while(user_offline[i] != NULL)
+    {
+        gtk_tree_store_append(store, &child, &toplevel);
+        gtk_tree_store_set(store, &child, COLUMN, user_offline[i], -1);
+        i++;
+    }
+}
+
+
+void remove_all_user(GtkWidget *list)
 {
   GtkListStore *store;
   GtkTreeModel *model;
@@ -171,14 +211,14 @@ int main_window_create()
     //创建TreeView
     user_view = create_view_and_model();
     selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(user_view));
-    
+   
     gtk_box_pack_start(GTK_BOX(main_window_vbox), user_view, TRUE, TRUE, 1);
 
     //创建状态栏
     statusbar = gtk_statusbar_new();
     gtk_box_pack_start(GTK_BOX(main_window_vbox), statusbar, FALSE, TRUE, 1);
 
-    g_signal_connect(user_view, "row-activated", (GCallback) view_onRowActivated, statusbar);
+    g_signal_connect(user_view, "row-activated", (GCallback) list_row_activated, statusbar);
 }
 
 /**
@@ -205,7 +245,7 @@ int login_dialog_create()
  *
  * @return 
  */
-GtkWidget *talk_window_create()
+GtkWidget *talk_window_create(char *name)
 {
     GtkWidget *window;
     GtkWidget *label1;
@@ -232,7 +272,7 @@ GtkWidget *talk_window_create()
 
     GtkWidget *scrolledwindow1;
     char acp[100];
-    sprintf(acp, "%s正在与 %s 进行对话聊天","hcx", "hcx");
+    sprintf(acp, "正在与 %s 进行对话聊天", name);
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     //	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_window_set_resizable(GTK_WINDOW(window),FALSE);
@@ -248,7 +288,7 @@ GtkWidget *talk_window_create()
     gtk_container_add(GTK_CONTAINER(window), table);
     gtk_widget_show(table);
 
-    label1 = gtk_label_new("提示: 水平有限,有错误请谅解!");
+    label1 = gtk_label_new("1");
     gtk_table_attach_defaults(GTK_TABLE(table), label1, 0, 10, 0, 1);
     gtk_widget_show(label1);
 
@@ -257,7 +297,7 @@ GtkWidget *talk_window_create()
     gtk_widget_show(list1);
     gtk_text_view_set_editable(GTK_TEXT_VIEW(list1), FALSE);
 
-    label2 = gtk_label_new("");
+    label2 = gtk_label_new("2");
     gtk_table_attach_defaults(GTK_TABLE(table), label2,0,4, 5, 6);
     gtk_widget_show(label2);
     //中间按钮工具栏+++++++++++
@@ -331,15 +371,17 @@ GtkWidget *talk_window_create()
     //klose.wcl=window;
     //klose.cl=h;
 
-    //	gtk_signal_connect(GTK_OBJECT(button_send), "clicked", GTK_SIGNAL_FUNC(wri_to),(gpointer) h);
+    allmsg[0].buffer_up = gtk_text_view_get_buffer(GTK_TEXT_VIEW(list1));
+    allmsg[0].buffer_down = gtk_text_view_get_buffer(GTK_TEXT_VIEW(list2));
+    allmsg[0].to_name = strdup(name);
+    int num = 0;
+   	gtk_signal_connect(GTK_OBJECT(button_send), "clicked", GTK_SIGNAL_FUNC(send_button_clicked),(gpointer)num);
     //	gtk_signal_connect(GTK_OBJECT(xiaoxi), "clicked", GTK_SIGNAL_FUNC(button_recourd),(gpointer) h);
     //	gtk_signal_connect(GTK_OBJECT(xiexin), "clicked", GTK_SIGNAL_FUNC(button_email),(gpointer) h);
-    //	gtk_signal_connect(GTK_OBJECT(button_close), "clicked", GTK_SIGNAL_FUNC(button_klose),(gpointer)&klose);
+   	gtk_signal_connect(GTK_OBJECT(button_close), "clicked", GTK_SIGNAL_FUNC(talk_close_button_clicked), (gpointer)window);
     //	gtk_signal_connect(GTK_OBJECT(send_file), "clicked", GTK_SIGNAL_FUNC(on_button_clicked),(gpointer) h);
 
     gtk_widget_show_all(window);
-
-    //	gtk_main();
 
     return window;
 

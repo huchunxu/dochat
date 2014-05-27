@@ -7,11 +7,11 @@
 
 void quit_app(GtkWidget *window, gpointer data);
 void login_button_clicked (GtkWidget *button, gpointer data);
-void view_onRowActivated (GtkTreeView *treeview,
+void list_row_activated(GtkTreeView *treeview,
                       GtkTreePath *path,
                       GtkTreeViewColumn *col,
                       gpointer userdata);
-
-
+void send_button_clicked(GtkWidget * widget, gpointer data);
+void talk_close_button_clicked(GtkWidget * widget, gpointer data);
 
 #endif

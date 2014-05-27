@@ -10,8 +10,10 @@
 #include "chat_client.h"
 #include "interface.h"
 
-//static char *serverip = "127.0.0.1";
-//static int serverport = 8000;
+static int input_handler(ChatClient *cli);
+static int input_parse(ChatClient *cli);
+static int socket_handler(ChatClient *cli);
+
 static char inputbuf[MAXLEN] ={ 0 };  //stdin输入缓存
 static int inputs = 0;
 
@@ -25,54 +27,6 @@ static int inputs = 0;
  */
 void client_main(gpointer data)
 {
-    /*
-    ChatClient *cli = (ChatClient *) malloc(sizeof(ChatClient));   //客户端分配资源
-    if (cli == NULL)
-    {
-        printf("[%s]: failed to malloc\n", argv[0]);
-        return -1;
-    }
-    bzero(cli, sizeof(ChatClient));
-
-    if ((para_mode = para_analyze(cli, argc, argv)) < 0)
-    {
-        return -1;
-    }
-
-    cli->sktfd = socket(AF_INET, SOCK_STREAM, 0);             //建立socket
-    if (cli->sktfd < 0)
-    {
-        printf("Client socket error\n");
-        return -1;
-    }
-    cli->sktaddr.sin_family = AF_INET;
-    cli->sktaddr.sin_port = htons(serverport);
-    inet_pton(AF_INET, serverip, &(cli->sktaddr.sin_addr));   //点分十进制转换成整数
-    connect(cli->sktfd, (struct sockaddr *) &(cli->sktaddr), sizeof(cli->sktaddr));
-
-    if(para_mode == CMD_REGISTER)
-    {
-         if(client_register(cli) < 0)
-         {
-             printf("failed to register\n");
-             return -1;
-         }
-    }
-    else
-    {
-        if (client_login(cli) < 0)
-        {
-            printf("failed to login\n");
-            return -1;
-        }
-    }
-    printf("> ");
-    fflush(stdout);
-    cli->epfd = epoll_create(MAXEVENTS);                      //创建监听文件集合
-    fd_add_events(cli->epfd, fileno(stdin), EPOLLIN);         //监听标准输入
-    fd_add_events(cli->epfd, cli->sktfd, EPOLLIN);            //监听socket
-
-    */
     ChatClient *cli = (ChatClient *)data; 
     struct epoll_event evts[MAXEVENTS];
     while (1)
@@ -94,79 +48,6 @@ void client_main(gpointer data)
     }
 }
 
-/**
- * @brief 帮助信息
- */
-static void help()
-{
-    printf("Usage:\n");
-    printf("Example: Login: ./chatclient -u hcx -p 123456\n");
-    printf("Example: Register: ./chatclient -r -u hcx -p 123456\n");
-}
-
-/**
- * @brief 参数分析
- *
- * @param cli    客户端数据结构
- * @param argc   参数数量
- * @param argv[] 参数值
- *
- * @return 
- */
-/*
-static int para_analyze(ChatClient *cli, int argc, char *argv[])
-{
-    int rflag = 0;
-    int uflag = 0;
-    int pflag = 0;
-    int hflag = 0;
-    int ch;
-
-    while ((ch = getopt(argc, argv, "ru:p:")) != -1)
-    {
-        switch (ch) {
-        case 'r':
-            rflag = 1;
-            printf("Trying to apply for registration...\n");
-            break;
-        case 'u':
-            uflag = 1;
-            cli->name = strdup(optarg);
-            printf("The user name %s\n", cli->name);
-            break;
-        case 'p':
-            pflag = 1;
-            cli->password = strdup(optarg);
-            printf("The password is %s\n", cli->password);
-            break;
-        case '?':
-            hflag = 1;
-            printf("Unknown option: %c\n",(char)optopt);
-            break;
-        }
-    }
-
-    if(rflag && uflag && pflag)    //注册用户
-    {
-        return CMD_REGISTER;
-    }
-    else if(uflag && pflag)       //登陆
-    {
-        return CMD_LOGIN;
-    }
-    else if(hflag)
-    {
-        help();
-        return -1; 
-    }
-    else
-    {
-        printf("The user or the password is not input!\n");
-        help();
-        return -1; 
-    }
-}
-*/
 
 /**
  * @brief 输入处理函数
@@ -334,13 +215,29 @@ static int socket_handler(ChatClient *cli)
             }
         case MSG_USER_ONLINE:
             {
-                
+                char *user_name[100] = {NULL};
+                int i = 0;
+                for (i = 0; i < pkt->nmsg; i++)     //接收到的信息
+                {
+                    user_name[i] = strdup(pkt->msg[i]);
+                }
+
+                gdk_threads_enter();
+                remove_all_user(user_view);
+                update_user_online(user_view, user_name);
+                //update_user_offline(user_view, user_name);
+                gdk_threads_leave();
                 printf("MSG_USER_ONLINE:\n");
                 break;
             }
         case MSG_USER_ALL:
             {
                 printf("MSG_USER_ALL:\n");
+                break;
+            }
+        case MSG_CHECK_USER_ONLINE:
+            {
+                client_parse_input(cli, "whoison");
                 break;
             }
         default:
