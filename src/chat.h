@@ -27,6 +27,7 @@
 #define MAXLEN 1024
 #define MAXWAIT 50       //未处理连接的最大数目
 #define MAXEVENTS 1000   //最大的连接数
+#define MAXTALK 10
 
 #define SERV_NAME "SERVER"  //服务器名字
 

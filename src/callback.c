@@ -54,7 +54,6 @@ void login_button_clicked (GtkWidget *button, gpointer data)
     if (cli == NULL)
     {
         printf("[%s]: failed to malloc\n", username_text);
-        return -1;
     }
     bzero(cli, sizeof(ChatClient));
     cli->name = strdup(username_text);
@@ -64,7 +63,6 @@ void login_button_clicked (GtkWidget *button, gpointer data)
     if (cli->sktfd < 0)
     {
         printf("Client socket error\n");
-        return -1;
     }
     cli->sktaddr.sin_family = AF_INET;
     cli->sktaddr.sin_port = htons(serverport);
@@ -74,7 +72,6 @@ void login_button_clicked (GtkWidget *button, gpointer data)
     if (client_login(cli) < 0)
     {
         printf("failed to login\n");
-        return -1;
     }
  
     printf("> ");
@@ -104,7 +101,7 @@ void list_row_activated(GtkTreeView *treeview,
         
         if(strcmp(name, "在线好友") != 0)
         {
-            talk_window_create(name);
+            talk_window_create(cli->name, name);
         }
         gtk_statusbar_push(GTK_STATUSBAR(userdata), 
                 gtk_statusbar_get_context_id(GTK_STATUSBAR(userdata), name), name); 
@@ -113,24 +110,67 @@ void list_row_activated(GtkTreeView *treeview,
     }
 }
 
+void combochange_log(int fs, char *msg)
+{
+	GtkTextIter iter;
+	GString *order_string;
+	//GtkTextMark *tmp_mark;
+
+	gtk_text_buffer_get_end_iter(allmsg[fs].buffer_up, &iter);
+	gtk_text_buffer_insert(allmsg[fs].buffer_up, &iter,msg, -1);
+	
+    /*
+	char mes[200];
+	char date[25];
+	memset(date,'\0',25);
+	memset(mes,'\0',200);
+printf("123456789=%s\n",msg);
+	sprintf(mes,"echo '%s' >> ./recourd/recourd-%s.txt",msg,allmess[fs].name);
+	if (recourd){
+	system("mkdir ./recourd");
+	sprintf(date,"date >> ./recourd/recourd-%s.txt",allmess[fs].name);
+	system(date);
+	memset(mes,'\0',200);
+	sprintf(mes,"echo '%s' >> ./recourd/recourd-%s.txt",msg,allmess[fs].name);
+printf("9999999999=%s\n",msg);
+//	usleep(5000);
+//	system(mes);
+	recourd=0;
+	}
+	system(mes);
+*/
+	order_string = g_string_new("\n");
+	gtk_text_buffer_insert(allmsg[fs].buffer_up, &iter, order_string->str, -1);
+	g_string_free(order_string, TRUE);
+}
+
 void send_button_clicked(GtkWidget * widget, gpointer data)
 {
 	char *text;
-    int num = (int)data;
+    int num = (int) data;
 	GtkTextIter start, end;
 
 	gtk_text_buffer_get_bounds(GTK_TEXT_BUFFER(allmsg[num].buffer_down), &start, &end);	/*获得缓冲区开始和结束位置的Iter */
 	const GtkTextIter s = start, e = end;
 	text = (char *)gtk_text_buffer_get_text(GTK_TEXT_BUFFER(allmsg[num].buffer_down), &s, &e, FALSE);	/*获得文本框缓冲区文本 */
     char send_text[MAXLEN];
-    sprintf(send_text, "to %s:", allmsg[0].to_name);
+    sprintf(send_text, "to %s : ", allmsg[num].to_name);
     strcat(send_text, text);    
     printf("%s\n",send_text);
-    client_parse_input(cli, send_text);
-    gtk_text_buffer_set_text(GTK_TEXT_BUFFER(allmsg[0].buffer_down), "", -1);  //清空缓冲区
+
+    client_parse_input(cli, send_text);    //发送信息
+    
+    sprintf(send_text, "%s : ", cli->name);
+    strcat(send_text, text);   
+    combochange_log(num, send_text);         //在聊天窗口显示
+    
+    gtk_text_buffer_set_text(GTK_TEXT_BUFFER(allmsg[num].buffer_down), "", -1);  //清空缓冲区
 }
 
 void talk_close_button_clicked(GtkWidget * widget, gpointer data)
 {
+    int num = (int) data;
+
+    allmsg[num].open_state = 0;
     gtk_widget_destroy((GtkWidget *)data);
 }

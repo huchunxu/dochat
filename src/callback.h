@@ -4,7 +4,6 @@
 #include "chat.h"
 #include <gtk/gtk.h>
 
-
 void quit_app(GtkWidget *window, gpointer data);
 void login_button_clicked (GtkWidget *button, gpointer data);
 void list_row_activated(GtkTreeView *treeview,

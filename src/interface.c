@@ -15,14 +15,15 @@ GtkWidget *login_window;
 GtkWidget *user_view;
 
 struct login_entry_msg login_entry;
-struct talk_msg allmsg[10];
+struct talk_msg allmsg[MAXTALK] = {0};
+int talk_window_num = 0;
 
 /**
  * @brief 登陆界面的设计
  *
  * @return 
  */
-int login_ui_create()
+void login_ui_create()
 {    
     int login_window_width  = 200;   // 登陆界面的尺寸
     int login_window_length = 150;
@@ -71,8 +72,6 @@ int login_ui_create()
     //添加到window中，并且显示
     gtk_container_add(GTK_CONTAINER(login_window), vbox);
     gtk_widget_show_all(login_window);
-
-    return 0;
 }
 
 static GtkTreeModel *create_and_fill_model(void)
@@ -188,7 +187,7 @@ void remove_all_user(GtkWidget *list)
  *
  * @return 
  */
-int main_window_create()
+void main_window_create()
 {
     int main_window_width  = 200;   //主界面的尺寸
     int main_window_length = 600;
@@ -226,7 +225,7 @@ int main_window_create()
  *
  * @return 
  */
-int login_dialog_create()
+void login_dialog_create()
 {
     GtkWidget *dialog = gtk_message_dialog_new(
             GTK_WINDOW(login_window),                   //没有父窗口
@@ -245,7 +244,7 @@ int login_dialog_create()
  *
  * @return 
  */
-GtkWidget *talk_window_create(char *name)
+GtkWidget *talk_window_create(char *from_name, char *to_name)
 {
     GtkWidget *window;
     GtkWidget *label1;
@@ -269,10 +268,16 @@ GtkWidget *talk_window_create(char *name)
     color.green = 0xcf00;
     color.blue = 0xff00;   
     //	gtk_widget_modify_bg(window_login,GTK_STATE_NORMAL, &color);
+    
+    if(talk_window_num > MAXTALK)
+    {
+        printf("The talk window is more than %d\n", MAXTALK);
+        return -1;
+    }
 
     GtkWidget *scrolledwindow1;
     char acp[100];
-    sprintf(acp, "正在与 %s 进行对话聊天", name);
+    sprintf(acp, "%s 正在与 %s 进行对话聊天", from_name, to_name);
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     //	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_window_set_resizable(GTK_WINDOW(window),FALSE);
@@ -371,15 +376,18 @@ GtkWidget *talk_window_create(char *name)
     //klose.wcl=window;
     //klose.cl=h;
 
-    allmsg[0].buffer_up = gtk_text_view_get_buffer(GTK_TEXT_VIEW(list1));
-    allmsg[0].buffer_down = gtk_text_view_get_buffer(GTK_TEXT_VIEW(list2));
-    allmsg[0].to_name = strdup(name);
-    int num = 0;
-   	gtk_signal_connect(GTK_OBJECT(button_send), "clicked", GTK_SIGNAL_FUNC(send_button_clicked),(gpointer)num);
+    allmsg[talk_window_num].buffer_up = gtk_text_view_get_buffer(GTK_TEXT_VIEW(list1));
+    allmsg[talk_window_num].buffer_down = gtk_text_view_get_buffer(GTK_TEXT_VIEW(list2));
+    allmsg[talk_window_num].to_name = strdup(to_name);
+    allmsg[talk_window_num].open_state = 1;
+   	gtk_signal_connect(GTK_OBJECT(button_send), "clicked", GTK_SIGNAL_FUNC(send_button_clicked),(gpointer)talk_window_num);
     //	gtk_signal_connect(GTK_OBJECT(xiaoxi), "clicked", GTK_SIGNAL_FUNC(button_recourd),(gpointer) h);
     //	gtk_signal_connect(GTK_OBJECT(xiexin), "clicked", GTK_SIGNAL_FUNC(button_email),(gpointer) h);
    	gtk_signal_connect(GTK_OBJECT(button_close), "clicked", GTK_SIGNAL_FUNC(talk_close_button_clicked), (gpointer)window);
     //	gtk_signal_connect(GTK_OBJECT(send_file), "clicked", GTK_SIGNAL_FUNC(on_button_clicked),(gpointer) h);
+    g_signal_connect(GTK_OBJECT(window), "destroy", GTK_SIGNAL_FUNC(talk_close_button_clicked), (gpointer)talk_window_num);
+
+    talk_window_num++;
 
     gtk_widget_show_all(window);
 

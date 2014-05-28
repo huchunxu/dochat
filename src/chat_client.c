@@ -227,12 +227,12 @@ static int socket_handler(ChatClient *cli)
                 update_user_online(user_view, user_name);
                 //update_user_offline(user_view, user_name);
                 gdk_threads_leave();
-                printf("MSG_USER_ONLINE:\n");
+                printf("MSG_USER_ONLINE\n");
                 break;
             }
         case MSG_USER_ALL:
             {
-                printf("MSG_USER_ALL:\n");
+                printf("MSG_USER_ALL\n");
                 break;
             }
         case MSG_CHECK_USER_ONLINE:
@@ -240,14 +240,35 @@ static int socket_handler(ChatClient *cli)
                 client_parse_input(cli, "whoison");
                 break;
             }
-        default:
+        case MSG_TEXT_SEND:
             {
+                char send_text[MAXLEN];
+                int i = 0;
+
+                gdk_threads_enter();
+                
+                for(i=0;i<MAXTALK;i++)
+                {
+                    if((allmsg[i].open_state == 1) &&
+                            (strcmp(pkt->from, allmsg[i].to_name) == 0))
+                        break;
+                }
+                if(i>=MAXTALK)
+                    talk_window_create(pkt->to, pkt->from);
+                sprintf(send_text, "%s : ", pkt->from);
+                
                 for (i = 0; i < pkt->nmsg; i++)     //接收到的信息
                 {
+                    strcat(send_text, pkt->msg[i]);   
+                    combochange_log(0, send_text);
                     printf("  %s\n", pkt->msg[i]);
                 }
+                
+                gdk_threads_leave();
                 break;
             }
+        default:
+            break;
     }
 
     packet_free(pkt);
